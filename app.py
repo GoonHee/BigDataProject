@@ -163,6 +163,70 @@ with tab1:
 
     st.markdown("---")
 
+    # Interactive filterable dataset
+    st.subheader("🔎 Interactive Transaction Explorer")
+    st.markdown("Filter and explore the dataset to identify fraud patterns.")
+
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+
+    with filter_col1:
+        fraud_filter = st.selectbox(
+            "Transaction Class",
+            ["All", "Fraud Only", "Normal Only"]
+        )
+    with filter_col2:
+        if 'Transaction_Type' in df_raw.columns:
+            tt_filter_opts = ["All"] + sorted(df_raw['Transaction_Type'].unique().tolist())
+            tt_filter = st.selectbox("Transaction Type", tt_filter_opts)
+        else:
+            tt_filter = "All"
+    with filter_col3:
+        amount_min = float(df_raw['Transaction_Amount'].min())
+        amount_max = float(df_raw['Transaction_Amount'].max())
+        amount_range = st.slider(
+            "Transaction Amount Range",
+            min_value=amount_min,
+            max_value=amount_max,
+            value=(amount_min, amount_max),
+            format="$%.0f"
+        )
+
+    # Apply filters
+    df_filtered = df_raw.copy()
+    if fraud_filter == "Fraud Only":
+        df_filtered = df_filtered[df_filtered[raw_target] == 1]
+    elif fraud_filter == "Normal Only":
+        df_filtered = df_filtered[df_filtered[raw_target] == 0]
+    if tt_filter != "All" and 'Transaction_Type' in df_raw.columns:
+        df_filtered = df_filtered[df_filtered['Transaction_Type'] == tt_filter]
+    df_filtered = df_filtered[
+        (df_filtered['Transaction_Amount'] >= amount_range[0]) &
+        (df_filtered['Transaction_Amount'] <= amount_range[1])
+    ]
+
+    st.markdown(f"**Showing {len(df_filtered):,} records** ({int(df_filtered[raw_target].sum()):,} fraud, {int((df_filtered[raw_target]==0).sum()):,} normal)")
+
+    display_cols = ['Transaction_Amount', 'Account_Balance', 'Transaction_Type',
+                    'Account_Type', 'Transaction_Device', 'Merchant_Category',
+                    'Age', 'Gender', raw_target]
+    display_cols = [c for c in display_cols if c in df_filtered.columns]
+
+    df_display = df_filtered[display_cols].head(500).copy()
+    df_display['Transaction_Amount'] = df_display['Transaction_Amount'].round(2)
+    df_display['Account_Balance']    = df_display['Account_Balance'].round(2)
+
+    st.dataframe(
+        df_display.style.apply(
+            lambda x: ['background-color: #ffe6e6' if v == 1 else '' for v in x],
+            subset=[raw_target]
+        ),
+        use_container_width=True,
+        height=350
+    )
+
+
+    st.markdown("---")
+
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Class Distribution")
@@ -215,6 +279,54 @@ with tab1:
                 labels={'x': 'Account Type', 'y': 'Fraud Rate'}
             )
             st.plotly_chart(fig5, use_container_width=True)
+
+    st.markdown("---")
+
+    # Correlation Heatmap
+    st.subheader("Feature Correlation Heatmap")
+    num_cols = df_clean.select_dtypes(include='number').columns.tolist()
+    corr_matrix = df_clean[num_cols].corr()
+    fig_heat, ax_heat = plt.subplots(figsize=(10, 6))
+    sns.heatmap(
+        corr_matrix, annot=True, fmt='.2f', cmap='coolwarm',
+        center=0, square=True, linewidths=0.5,
+        annot_kws={'size': 6}, ax=ax_heat
+    )
+    ax_heat.set_title('Feature Correlation Matrix', fontsize=12)
+    ax_heat.set_xticklabels(ax_heat.get_xticklabels(), rotation=45, ha='right', fontsize=7)
+    ax_heat.set_yticklabels(ax_heat.get_yticklabels(), rotation=0, fontsize=7)
+    plt.tight_layout()
+    st.pyplot(fig_heat)
+
+    # Age distribution
+    st.subheader("Age Distribution by Transaction Class")
+    if 'Age' in df_raw.columns:
+        fig_age = px.histogram(
+            df_raw, x='Age', color=raw_target,
+            title='Age Distribution: Fraud vs Normal',
+            nbins=30, barmode='group', opacity=0.9,
+            color_discrete_map={0: '#3498db', 1: '#e74c3c'},
+            labels={raw_target: 'Transaction Class'}
+        )
+        fig_age.for_each_trace(lambda t: t.update(
+            name='Fraud' if t.name == '1' else 'Normal'
+        ))
+        st.plotly_chart(fig_age, use_container_width=True)
+
+    # Transaction Device fraud rate
+    st.subheader("Fraud Rate by Transaction Device")
+    if 'Transaction_Device' in df_raw.columns:
+        fraud_by_device = df_raw.groupby('Transaction_Device')[raw_target].mean().sort_values(ascending=False)
+        fig_dev = px.bar(
+            x=fraud_by_device.index, y=fraud_by_device.values,
+            title='Fraud Rate by Transaction Device',
+            labels={'x': 'Device', 'y': 'Fraud Rate'},
+            color=fraud_by_device.values,
+            color_continuous_scale='Reds'
+        )
+        st.plotly_chart(fig_dev, use_container_width=True)
+
+
 
 # ==================== TAB 2: MODEL PERFORMANCE ====================
 with tab2:
@@ -273,6 +385,39 @@ with tab2:
         plt.tight_layout()
         st.pyplot(fig_imp)
 
+    # Precision-Recall Curves
+    st.subheader("📊 Precision-Recall Curves")
+    from sklearn.metrics import precision_recall_curve, average_precision_score
+    fig_pr, ax_pr = plt.subplots(figsize=(8, 6))
+    for name, metrics in results.items():
+        precision, recall, _ = precision_recall_curve(metrics['y_test'], metrics['y_proba'])
+        ap = average_precision_score(metrics['y_test'], metrics['y_proba'])
+        ax_pr.plot(recall, precision, lw=2, label=f'{name} (AP = {ap:.4f})')
+    ax_pr.set_xlabel('Recall')
+    ax_pr.set_ylabel('Precision')
+    ax_pr.set_title('Precision-Recall Curves')
+    ax_pr.legend(loc='upper right')
+    st.pyplot(fig_pr)
+    st.caption("Precision-Recall curves are more informative than ROC for imbalanced datasets like fraud detection.")
+
+    # Radar Chart
+    st.subheader("📊 Model Metrics Radar Chart")
+    metrics_cols = ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC']
+    fig_radar = go.Figure()
+    for _, row in comparison_df.iterrows():
+        fig_radar.add_trace(go.Scatterpolar(
+            r=[row[m] for m in metrics_cols],
+            theta=metrics_cols,
+            fill='toself',
+            name=row['Model']
+        ))
+    fig_radar.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+        showlegend=True,
+        title='Model Performance Radar Chart'
+    )
+    st.plotly_chart(fig_radar, use_container_width=True)
+
     st.success(f"🏆 **Best Model: {best_model_name}** (based on F1 Score)")
 
 # ==================== TAB 3: REAL-TIME PREDICTION ====================
@@ -303,7 +448,7 @@ with tab3:
         account_type = st.selectbox("Account Type", acct_opts)
         input_raw['Account_Type'] = account_type
 
-        transaction_amount = st.number_input("Transaction Amount", min_value=0.01, value=500.0)
+        transaction_amount = st.number_input("Transaction Amount", min_value=0.01, value=30000.0)
         input_raw['Transaction_Amount'] = transaction_amount
 
     with col2:
@@ -315,7 +460,7 @@ with tab3:
         merchant = st.selectbox("Merchant Category", mc_opts)
         input_raw['Merchant_Category'] = merchant
 
-        account_balance = st.number_input("Account Balance", min_value=0.0, value=5000.0)
+        account_balance = st.number_input("Account Balance", min_value=0.0, value=50000.0)
         input_raw['Account_Balance'] = account_balance
 
         td_opts = get_options('Transaction_Device') or ['Mobile', 'Desktop', 'Tablet', 'ATM', 'POS']
@@ -474,6 +619,8 @@ with tab3:
             st.write(f"**Hour:** {hour}:00")
             st.write(f"**Account Balance:** ${account_balance:,.2f}")
             st.write(f"**Model Used:** {best_model_name}")
+
+
 
 # Footer
 st.markdown("---")
