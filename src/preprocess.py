@@ -289,9 +289,10 @@ def full_preprocessing_pipeline(raw_filepath, output_filepath, do_feature_engine
 
 # ==================== MAIN ====================
 if __name__ == "__main__":
-    # File paths - CHANGE THESE TO YOUR PATHS
-    RAW_DATA_PATH = "C:/Users/ruxin/Documents/ruxin/Big Data 5011/Data/Bank_Transaction_Fraud_Detection.csv"
-    OUTPUT_PATH = "C:/Users/ruxin/Documents/ruxin/Big Data 5011/Data/preprocessed_data.csv"
+    # Use project-local paths so the script works on any machine
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    RAW_DATA_PATH = os.path.join(BASE_DIR, "data", "Bank_Transaction_Fraud_Detection.csv")
+    OUTPUT_PATH = os.path.join(BASE_DIR, "data", "preprocessed_data.csv")
     
     # Run preprocessing
     df_processed = full_preprocessing_pipeline(
