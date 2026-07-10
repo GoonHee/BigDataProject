@@ -27,8 +27,8 @@ st.title("🔍 Financial Fraud Detection Dashboard")
 st.markdown("Big Data Analytics System using Machine Learning")
 
 # ==================== DATA PATHS ====================
-RAW_DATA_PATH   = "D:/5011/Bank_Transaction_Fraud_Detection.csv"
-CLEAN_DATA_PATH = "D:/5011/preprocessed_data.csv"
+RAW_DATA_PATH   = "data/Bank_Transaction_Fraud_Detection.csv"
+CLEAN_DATA_PATH = "data/preprocessed_data.csv"
 
 # ==================== LOAD DATA ====================
 @st.cache_data

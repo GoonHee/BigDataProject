@@ -290,8 +290,8 @@ def full_preprocessing_pipeline(raw_filepath, output_filepath, do_feature_engine
 # ==================== MAIN ====================
 if __name__ == "__main__":
     # File paths - CHANGE THESE TO YOUR PATHS
-    RAW_DATA_PATH = "C:/Users/ruxin/Documents/ruxin/Big Data 5011/Data/Bank_Transaction_Fraud_Detection.csv"
-    OUTPUT_PATH = "C:/Users/ruxin/Documents/ruxin/Big Data 5011/Data/preprocessed_data.csv"
+    RAW_DATA_PATH = "data/Bank_Transaction_Fraud_Detection.csv"
+    OUTPUT_PATH = "data/preprocessed_data.csv"
     
     # Run preprocessing
     df_processed = full_preprocessing_pipeline(
