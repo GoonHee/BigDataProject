@@ -27,8 +27,8 @@ st.title("🔍 Financial Fraud Detection Dashboard")
 st.markdown("Big Data Analytics System using Machine Learning")
 
 # ==================== DATA PATHS ====================
-RAW_DATA_PATH   = "data/Bank_Transaction_Fraud_Detection.csv"
-CLEAN_DATA_PATH = "data/preprocessed_data.csv"
+RAW_DATA_PATH   = "D:/5011/Bank_Transaction_Fraud_Detection.csv"
+CLEAN_DATA_PATH = "D:/5011/preprocessed_data.csv"
 
 # ==================== LOAD DATA ====================
 @st.cache_data
@@ -333,8 +333,12 @@ with tab2:
     st.header("🤖 Model Performance Comparison")
 
     st.subheader("📊 Model Comparison Table")
-    st.dataframe(comparison_df.style.highlight_max(axis=0, color='#90EE90'))
-
+    st.dataframe(
+        comparison_df.style.highlight_max(
+            subset=['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC'],
+            color='#90EE90'
+        )
+    )
     st.subheader("📊 Model Performance Visualization")
     melted_df = comparison_df.melt(id_vars=['Model'], var_name='Metric', value_name='Score')
     fig6 = px.bar(
