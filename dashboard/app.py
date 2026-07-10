@@ -26,9 +26,8 @@ st.set_page_config(
 st.title("🔍 Financial Fraud Detection Dashboard")
 st.markdown("Big Data Analytics System using Machine Learning")
 
-# ==================== DATA PATHS ====================
-RAW_DATA_PATH   = "D:/5011/Bank_Transaction_Fraud_Detection.csv"
-CLEAN_DATA_PATH = "D:/5011/preprocessed_data.csv"
+# ==================== DATA PATH ====================
+DATA_PATH = "C:/Users/ruxin/Documents/ruxin/Big Data 5011/Data/Bank_Transaction_Fraud_Detection.csv"
 
 # ==================== LOAD DATA ====================
 @st.cache_data
